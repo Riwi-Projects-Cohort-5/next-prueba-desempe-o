@@ -1,0 +1,115 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum SpaceStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ReservationStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+model User {
+  id String @id @default(cuid())
+
+  email String @unique
+
+  password String
+
+  name String?
+
+  role Role @default(USER)
+
+  createdAt DateTime @default(now())
+
+  reservations Reservation[]
+
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id String @id @default(cuid())
+
+  tokenHash String @unique
+
+  userId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime
+
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Space {
+  id String @id @default(cuid())
+
+  name String @unique
+
+  description String
+
+  price Decimal @db.Decimal(10, 2)
+
+  image String?
+
+  status SpaceStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  reservations Reservation[]
+}
+
+model Reservation {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  spaceId String
+  space   Space  @relation(fields: [spaceId], references: [id])
+
+  startAt DateTime
+  endAt   DateTime
+  hours   Int
+
+  totalPrice Decimal @db.Decimal(10, 2)
+
+  status ReservationStatus @default(CONFIRMED)
+
+  createdAt   DateTime  @default(now())
+  cancelledAt DateTime?
+
+  @@index([spaceId, startAt])
+  @@index([userId, startAt])
+  @@index([spaceId, status, startAt, endAt])
+}
+
+/**
+ * Space (nombre, descripción, precio por hora, imagen, activo/inactivo)
+ * Reservation (usuario, espacio, fecha/hora de inicio, duración en horas, estado: confirmada/cancelada, precio total calculado por el servidor)
+ * Role como enum si usas Prisma.*
+ */
